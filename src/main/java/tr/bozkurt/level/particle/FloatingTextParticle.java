@@ -1,0 +1,130 @@
+package tr.bozkurt.level.particle;
+
+import tr.bozkurt.entity.Entity;
+import tr.bozkurt.entity.data.EntityMetadata;
+import tr.bozkurt.entity.data.Skin;
+import tr.bozkurt.item.Item;
+import tr.bozkurt.math.Vector3;
+import tr.bozkurt.network.protocol.AddPlayerPacket;
+import tr.bozkurt.network.protocol.DataPacket;
+import tr.bozkurt.network.protocol.PlayerListPacket;
+import tr.bozkurt.network.protocol.RemoveEntityPacket;
+
+import java.util.ArrayList;
+import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
+
+/**
+ * Created on 2015/11/21 by xtypr.
+ * Package tr.bozkurt.level.particle in project Bozkurt.
+ */
+public class FloatingTextParticle extends Particle{
+
+	private static final Skin EMPTY_SKIN = new Skin();
+
+	protected String text;
+	protected String title;
+	protected long entityId = -1;
+	protected boolean invisible = false;
+	protected EntityMetadata metadata = new EntityMetadata();
+
+	public FloatingTextParticle(Vector3 pos, String text){
+		this(pos, text, "");
+	}
+
+	public FloatingTextParticle(Vector3 pos, String text, String title){
+		super(pos.x, pos.y, pos.z);
+		this.text = text;
+		this.title = title;
+	}
+
+	public String getText(){
+		return text;
+	}
+
+	public void setText(String text){
+		this.text = text;
+	}
+
+	public String getTitle(){
+		return title;
+	}
+
+	public void setTitle(String title){
+		this.title = title;
+	}
+
+	public boolean isInvisible(){
+		return invisible;
+	}
+
+	public void setInvisible(boolean invisible){
+		this.invisible = invisible;
+	}
+
+	public void setInvisible(){
+		this.setInvisible(true);
+	}
+
+	public long getEntityId(){
+		return entityId;
+	}
+
+	@Override
+	public DataPacket[] encode(){
+		ArrayList<DataPacket> packets = new ArrayList<>();
+
+		if(this.entityId == -1){
+			this.entityId = 1095216660480L + ThreadLocalRandom.current().nextLong(0, 0x7fffffffL);
+		}else{
+			RemoveEntityPacket pk = new RemoveEntityPacket();
+			pk.eid = this.entityId;
+
+			packets.add(pk);
+		}
+
+		UUID uuid = UUID.randomUUID();
+
+		if(!this.invisible){
+			PlayerListPacket playerAdd = new PlayerListPacket();
+			playerAdd.entries = new PlayerListPacket.Entry[]{
+					new PlayerListPacket.Entry(uuid, this.entityId, this.title, EMPTY_SKIN)
+			};
+			playerAdd.type = PlayerListPacket.TYPE_ADD;
+			packets.add(playerAdd);
+
+			AddPlayerPacket pk = new AddPlayerPacket();
+			pk.uuid = uuid;
+			pk.username = this.title + (this.text.isEmpty() ? "" : "\n" + this.text);
+			pk.entityUniqueId = this.entityId;
+			pk.entityRuntimeId = this.entityId;
+			pk.x = (float) this.x;
+			pk.y = (float) (this.y - 0.75);
+			pk.z = (float) this.z;
+			pk.speedX = 0;
+			pk.speedY = 0;
+			pk.speedZ = 0;
+			pk.yaw = 0;
+			pk.pitch = 0;
+			long flags = (
+					1L << Entity.DATA_FLAG_IMMOBILE
+			);
+			pk.metadata = new EntityMetadata()
+					.putLong(Entity.DATA_FLAGS, flags)
+					.putLong(Entity.DATA_LEAD_HOLDER_EID, -1)
+					.putFloat(Entity.DATA_SCALE, 0.01f); //zero causes problems on debug builds?
+			pk.item = Item.get(Item.AIR);
+			packets.add(pk);
+
+			PlayerListPacket playerRemove = new PlayerListPacket();
+			playerRemove.entries = new PlayerListPacket.Entry[]{
+					new PlayerListPacket.Entry(uuid)
+			};
+			playerRemove.type = PlayerListPacket.TYPE_REMOVE;
+			packets.add(playerRemove);
+		}
+
+		return packets.toArray(new DataPacket[0]);
+	}
+
+}

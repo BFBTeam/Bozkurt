@@ -1,0 +1,128 @@
+package tr.bozkurt.blockentity;
+
+import tr.bozkurt.Player;
+import tr.bozkurt.block.Block;
+import tr.bozkurt.event.block.SignChangeEvent;
+import tr.bozkurt.level.format.FullChunk;
+import tr.bozkurt.nbt.tag.CompoundTag;
+import tr.bozkurt.utils.TextFormat;
+
+import java.util.Objects;
+
+/**
+ * Bozkurt Project
+ */
+public class BlockEntitySign extends BlockEntitySpawnable{
+
+	private String[] text;
+
+	public BlockEntitySign(FullChunk chunk, CompoundTag nbt){
+		super(chunk, nbt);
+	}
+
+	@Override
+	protected void initBlockEntity(){
+		text = new String[4];
+
+		if(!namedTag.contains("Text")){
+
+			for(int i = 1; i <= 4; i++){
+				String key = "Text" + i;
+
+				if(namedTag.contains(key)){
+					String line = namedTag.getString(key);
+
+					this.text[i - 1] = line;
+
+					this.namedTag.remove(key);
+				}
+			}
+		}else{
+			String[] lines = namedTag.getString("Text").split("\n", 4);
+
+			for(int i = 0; i < text.length; i++){
+				if(i < lines.length)
+					text[i] = lines[i];
+				else
+					text[i] = "";
+			}
+		}
+
+		super.initBlockEntity();
+	}
+
+	@Override
+	public void saveNBT(){
+		super.saveNBT();
+		this.namedTag.remove("Creator");
+	}
+
+	@Override
+	public boolean isBlockEntityValid(){
+		int blockID = getBlock().getId();
+		return blockID == Block.SIGN_POST || blockID == Block.WALL_SIGN;
+	}
+
+	public boolean setText(String... lines){
+		for(int i = 0; i < text.length; i++){
+			if(i < lines.length)
+				text[i] = lines[i];
+			else
+				text[i] = "";
+		}
+
+		this.namedTag.putString("Text", String.join("\n", text));
+		this.spawnToAll();
+
+		if(this.chunk != null){
+			this.setDirty();
+		}
+
+		return true;
+	}
+
+	public String[] getText(){
+		return text;
+	}
+
+	@Override
+	public boolean updateCompoundTag(CompoundTag nbt, Player player){
+		if(!nbt.getString("id").equals(BlockEntity.SIGN)){
+			return false;
+		}
+		String[] text = nbt.getString("Text").split("\n", 4);
+
+		SignChangeEvent signChangeEvent = new SignChangeEvent(this.getBlock(), player, text);
+
+		if(!this.namedTag.contains("Creator") || !Objects.equals(player.getUniqueId().toString(), this.namedTag.getString("Creator"))){
+			signChangeEvent.setCancelled();
+		}
+
+		if(player.getRemoveFormat()){
+			for(int i = 0; i < text.length; i++){
+				text[i] = TextFormat.clean(text[i]);
+			}
+		}
+
+		this.server.getPluginManager().callEvent(signChangeEvent);
+
+		if(!signChangeEvent.isCancelled()){
+			this.setText(signChangeEvent.getLines());
+			return true;
+		}
+
+		return false;
+	}
+
+	@Override
+	public CompoundTag getSpawnCompound(){
+		return new CompoundTag()
+				.putString("id", BlockEntity.SIGN)
+				.putString("Text", this.namedTag.getString("Text"))
+				.putInt("x", (int) this.x)
+				.putInt("y", (int) this.y)
+				.putInt("z", (int) this.z);
+
+	}
+
+}

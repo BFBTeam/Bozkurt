@@ -1,0 +1,17 @@
+package tr.bozkurt.utils;
+
+/**
+ * Bozkurt Project
+ */
+public class ChunkException extends RuntimeException{
+
+	public ChunkException(String message){
+		super(message);
+	}
+
+	@Override
+	public Throwable fillInStackTrace(){
+		return this;
+	}
+
+}

@@ -1,0 +1,39 @@
+package tr.bozkurt.level.biome.impl.savanna;
+
+/**
+ * @author DaPorkchop_
+ */
+public class SavannaMBiome extends SavannaBiome{
+	//TODO: coarse dirt?
+	//private static final Simplex coarseDirtNoise = new Simplex(new BozkurtRandom(0), 1d, 1 / 4f, 1 / 16f);
+	//boolean coarseDirt = false;
+
+	public SavannaMBiome(){
+		super();
+
+		//this is set to be above the build limit so that it'll actually hit it sometimes
+		this.setBaseHeight(0.3625f);
+		this.setHeightVariation(1.225f);
+	}
+
+	@Override
+	public String getName(){
+		return "Savanna M";
+	}
+
+	//@Override
+	//public int getSurfaceBlock(int y) {
+	//    return coarseDirt ? COARSE_DIRT : DIRT;
+	//}
+
+	//@Override
+	//public void preCover(int x, int z) {
+	//    coarseDirt = coarseDirtNoise.noise2D(x, z, true) < 0;
+	//}
+
+	@Override
+	public boolean doesOverhang(){
+		return true;
+	}
+
+}
